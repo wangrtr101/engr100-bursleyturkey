@@ -1,0 +1,13 @@
+# Python virtual environment
+bin/
+include/
+lib/
+share/
+pyvenv.cfg
+lib64
+
+# OS and Editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
