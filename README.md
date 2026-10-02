@@ -10,6 +10,6 @@ Bursley Turkeys team members:\
 Ricky Wang <wangrtr@umich.edu>\
 Charles Peng <houchao@umich.edu>\
 Matthew Kraytman <kraytman@umich.edu>\
-Sai Gangu <sgangu@umich.edu>\
+Sai Gangu <sgangu@umich.edu>
 
 *insert project goals, descriptions, etc*
