@@ -3,7 +3,7 @@ import sys
 import termios
 import tty
 
-TCP_IP = "192.168.50.XXX"   # Replace with your ESP32 IP
+TCP_IP = "192.168.50.225"   # Replace with your ESP32 IP
 TCP_PORT = 5005
 TIMEOUT_S = 5
 
@@ -33,12 +33,12 @@ def main():
     print("Manual control ready. Use WASD to move, x to stop, q to quit.")
     while True:
         # TODO: Read one character from the terminal
-        ch = # REPLACE WITH FUNCTION CALL
+        ch = input() # REPLACE WITH FUNCTION CALL
 
         # TODO: Check if the terminal character matches WASDX
-        if ch # FILL IN THE REST OF THE CONDITIONAL :
-            #sock.sendall((ch + "\n").encode("utf-8"))
-            #print(f"Sent: {ch}")
+        if ch == 'w' or ch == 'a' or ch == 's' or ch == 'd' or ch == 'x':
+            sock.sendall((ch + "\n").encode("utf-8"))
+            print(f"Sent: {ch}")
 
         elif ch == "q":
             print("Quitting...")
