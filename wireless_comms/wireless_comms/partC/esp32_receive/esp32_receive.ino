@@ -6,7 +6,7 @@
 const char *ssid_STA = "ENGR100-400"; //Enter the router name
 const char *password_STA = "notapwd777"; //Enter the router password
 
-IPAddress local_IP(192,168,50,/* Insert 3 assigned 3-digit number*/);//Set the IP address of ESP32 itself
+IPAddress local_IP(192,168,50,225);//* Insert 3 assigned 3-digit number*///Set the IP address of ESP32 itself
 IPAddress gateway(192,168,50,1);   //Set the gateway of ESP32 itself
 IPAddress subnet(255,255,255,0);  //Set the subnet mask for ESP32 itself
 
@@ -48,7 +48,8 @@ void WiFiSetup() {
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  # TODO: Enable WiFi using functions defined above
+  WiFiSetup();
+  //# TODO: Enable WiFi using functions defined above
 }
 
 
@@ -57,9 +58,17 @@ void loop() {
   char direction = 'x'; // Start in "stop" mode.
   WiFiClient client = server.available();            // listen for incoming clients
   if (client) {                                     // if you get a client,
-    # TODO: Loop while the client is connected
-    # TODO: Check if the ESP32 is receiving data from the laptop  
-    # TODO: If the ESP32 has data to read, grab it and print it over Serial ot the Arduino Nano
+    //# TODO: Loop while the client is connected
+    while(client.connected())
+    {
+      if(client.available())
+      {
+        String data = client.readStringUntil('\n');
+        Serial.println(data);
+      }
+    }
+    //# TODO: Check if the ESP32 is receiving data from the laptop  
+    //# TODO: If the ESP32 has data to read, grab it and print it over Serial ot the Arduino Nano
     client.stop();                                  // stop the client connecting.
   }
-s}
+}
