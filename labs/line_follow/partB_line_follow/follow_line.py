@@ -7,7 +7,7 @@ import queue
 import time
 import select
 
-LINE_FOLLOW_IP = '192.168.50.102'
+LINE_FOLLOW_IP = '192.168.50.225'
 TCP_PORT = 5005
 
 line_follow_url='http://' + LINE_FOLLOW_IP + '/stream'
