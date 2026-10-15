@@ -4,7 +4,7 @@ import numpy as np
 import time
 import select
 
-LINE_FOLLOW_IP = '192.168.50./* TODO */'
+LINE_FOLLOW_IP = '192.168.50.225x'
 TCP_PORT = 5005
 
 line_follow_url='http://' + LINE_FOLLOW_IP + '/stream'

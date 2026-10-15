@@ -9,7 +9,7 @@
 const char *ssid_STA = "ENGR100-400"; // Enter the router name
 const char *password_STA = "notapwd777"; // Enter the router password
 
-IPAddress local_IP(192, 168, 50, /* TODO */); // Set the IP address of ESP32 itself
+IPAddress local_IP(192, 168, 50, 225); // Set the IP address of ESP32 itself
 IPAddress gateway(192, 168, 50, 1); // Gateway for this device is the AP/Object Detection ESP32's IP Address
 IPAddress subnet(255, 255, 255, 0);
 
@@ -18,10 +18,10 @@ WiFiServer server(port);
 void startCameraServer();
 
 // define PID control constants
-#define K_P 0.50
-#define K_I 0.00
-#define K_D 0.00
-#define BASE_SPEED 100
+#define K_P 0.4
+#define K_I 0.0
+#define K_D 0.1
+#define BASE_SPEED 80
 #define TOP_SPEED 255
 #define INFLECTION_POINT 30.0
 
@@ -107,13 +107,13 @@ float pid_control(float error, float dt) {
   static float lastError = 0;
 
   // TODO: compute error integral (error accumulation scaled by time)
-  integral += /* TODO */;
+  integral += error*dt;
 
   // TODO: compute error derivative (derivative approximation)
-  float derivative = /* TODO */;
+  float derivative = error/dt;
 
   // TODO: compute output (sum of scaled P, I, D error values)
-  float output = /* TODO */;
+  float output = K_P * error + K_I * integral + K_D * derivative;
 
   // keep last value, return computed output
   lastError = error;

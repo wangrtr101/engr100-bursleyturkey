@@ -16,7 +16,7 @@ void Set_Speed(int Left, int Right)
   analogWrite(6,Right);   // Send a speed value (Right = 0-255) to Pin #6 for setting the rotation speed of the two right-side wheels.
 }
 
-void forward() {
+void back() {
   // Go forward
   digitalWrite(7, LOW);        // Set Pin #7 to LOW and set Pin #8 to HIGH, making two left-side wheels rotate forward.
   digitalWrite(8, HIGH);
@@ -24,7 +24,7 @@ void forward() {
   digitalWrite(11, LOW);
 }
 
-void back() {
+void forward() {
    // Go backward
   digitalWrite(7, HIGH);       // Set Pin #7 to HIGH and set Pin #8 to LOW, making two left-side wheels rotate backward.
   digitalWrite(8, LOW);
@@ -32,7 +32,7 @@ void back() {
   digitalWrite(11, HIGH);
 }
 
-void left() {
+void right() {
   // Turn right
   digitalWrite(7, HIGH);       // Set Pin #7 to HIGH and set Pin #8 to LOW, making two left-side wheels rotate backward.
   digitalWrite(8, LOW);
@@ -40,7 +40,7 @@ void left() {
   digitalWrite(11, LOW);
 }
 
-void right() {
+void left() {
   // Turn left
   digitalWrite(7, LOW);        // Set Pin #7 to LOW and set Pin #8 to HIGH, making two left-side wheels rotate forward.
   digitalWrite(8, HIGH);
