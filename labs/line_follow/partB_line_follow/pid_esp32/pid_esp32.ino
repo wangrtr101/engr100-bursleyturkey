@@ -9,7 +9,7 @@
 const char *ssid_STA = "ENGR100-400"; // Enter the router name
 const char *password_STA = "notapwd777"; // Enter the router password
 
-IPAddress local_IP(192, 168, 50, 225); // Set the IP address of ESP32 itself
+IPAddress local_IP(192, 168, 50, /* TODO */); // Set the IP address of ESP32 itself
 IPAddress gateway(192, 168, 50, 1); // Gateway for this device is the AP/Object Detection ESP32's IP Address
 IPAddress subnet(255, 255, 255, 0);
 
@@ -18,10 +18,11 @@ WiFiServer server(port);
 void startCameraServer();
 
 // define PID control constants
-#define K_P 0.5
+#define K_P 0.50
 #define K_I 0.00
-#define K_D 0.002
-#define BASE_SPEED 75
+#define K_D 0.00
+#define BASE_SPEED 100
+#define TOP_SPEED 255
 #define INFLECTION_POINT 30.0
 
 void cameraServerSetup() {
@@ -168,11 +169,11 @@ void loop() {
         float dt = 0.2; // set to 0.2 for stability
 
         float left_factor = 1.0; // if robot leans right, increase left factor
-        float right_factor = 1.1; // if robot leans left, increase right factor
+        float right_factor = 1.0; // if robot leans left, increase right factor
 
-        float speed_correction = pid_control(cte, 0.2); // perform PID control on received cte BEST VALUE: 0.25
-        float left_side_speed = constrain(BASE_SPEED - speed_correction * left_factor, 0, 150);
-        float right_side_speed = constrain(BASE_SPEED + speed_correction * right_factor, 0, 150);
+        float speed_correction = pid_control(cte, dt); // perform PID control on received cte BEST VALUE: 0.25
+        float left_side_speed = constrain(BASE_SPEED - speed_correction * left_factor, 0, TOP_SPEED);
+        float right_side_speed = constrain(BASE_SPEED + speed_correction * right_factor, 0, TOP_SPEED);
 
         char direction = determine_direction(cte); // determine how to shift the car's movement based on CTE
 
@@ -181,6 +182,7 @@ void loop() {
         client.println(pid_cmd); // send PID values back to laptop for debugging
       }
     }
+    Serial.println("STOP");
     client.stop();                                  // Stop the client connecting.
     Serial.println("Client Disconnected.");
   }

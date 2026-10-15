@@ -1,20 +1,17 @@
 import cv2
 import socket
 import numpy as np
-import imutils
-import threading
-import queue
 import time
 import select
 
-LINE_FOLLOW_IP = '192.168.50.225'
+LINE_FOLLOW_IP = '192.168.50./* TODO */'
 TCP_PORT = 5005
 
 line_follow_url='http://' + LINE_FOLLOW_IP + '/stream'
 
-low_black = np.uint8([55, 55, 55])
-high_black = np.uint8([0, 0, 0])
-kernel = np.ones((15, 15), np.float32) / 255
+low_orange = np.array([0, 0, 20], dtype=np.uint8)
+high_orange = np.array([70, 255, 255], dtype=np.uint8)
+angle_weight = 0
 
 def socket_setup():
     line_follow_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -46,20 +43,20 @@ def follow_line(sock):
         ret, frame = vid.read()
         if not ret:
             print("Couldn't read frame. Killing program.")
+            sock.sendall(b"STOP\n")
+            break
 
         # Blur the frame to reduce noise
         frame = cv2.GaussianBlur(frame, (5, 5), 0)
-        gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # Get black pixels (these values depend on room light)
-        gray_threshold = cv2.adaptiveThreshold(
-            gray_frame,
-            255,
-            cv2.ADAPTIVE_THRESH_MEAN_C,
-            cv2.THRESH_BINARY_INV,
-            103,  # block size
-            10   # constant to subtract
+        # Detect orange tape in HSV
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        gray_threshold = cv2.inRange(
+            hsv_frame,
+            low_orange,
+            high_orange
         )
+
         # Fill small holes in detection
         hole_kernel = np.ones((5, 5), np.uint8)
         gray_threshold = cv2.morphologyEx(gray_threshold, cv2.MORPH_CLOSE, hole_kernel)
@@ -67,10 +64,12 @@ def follow_line(sock):
         # Detect contours
         gray_threshold_contours, _ = cv2.findContours(gray_threshold, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        # Take the highest (yAxis) contours. Filters out some false positives
-        try:
-            bestContour = max(gray_threshold_contours, key=lambda c: cv2.boundingRect(c)[3])
-        except:
+        # Take the largest contour. Filters out some false positives
+        if gray_threshold_contours:
+            bestContour = max(gray_threshold_contours, key=cv2.contourArea)
+            if cv2.contourArea(bestContour) == 0:
+                bestContour = None
+        else:
             bestContour = None
 
         # Get frame center
@@ -78,23 +77,52 @@ def follow_line(sock):
 
         try:
             if bestContour is not None:
+                # Fit line to contour
+                mask = np.zeros_like(gray_threshold)
+                cv2.drawContours(mask, [bestContour], -1, 255, -1)
+                points = []
+                for y in range(frame.shape[0]):
+                    xs = np.where(mask[y] > 0)[0]
+                    if len(xs) > 0:
+                        x = (xs[0] + xs[-1]) / 2
+                        points.append((x, y))
+
+                points = np.array(points)
+                slope, intercept = np.polyfit(points[:, 1], points[:, 0], 1)
+
+                # Offset error
+                y_ref = frame.shape[0] / 2
+                x_ref = y_ref * slope + intercept
+                offset_error = center_of_frame[0] - x_ref
+
+                # Angle error (slope relative to vertical)
+                angle_error = slope
+
+                # Combined error
+                error = offset_error + angle_weight * angle_error
+
+                # Draw detected contour
                 cv2.putText(frame, "Line: FOUND", (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 cv2.drawContours(frame, [bestContour], -1, (0, 255, 0), 2)
 
-                M = cv2.moments(bestContour)
-                center_of_contour = np.array([int(M['m10'] / M['m00']), int(M['m01'] / M['m00'])], int)
+                # Draw fitted line across image
+                y1 = 0
+                x1 = int(y1 * slope + intercept)
+                y2 = frame.shape[0] - 1
+                x2 = int(y2 * slope + intercept)
+                cv2.line(frame, (x1, y1), (x2, y2), (255, 0, 255), 2)
 
-                # Calculate CTE (Cross-Track Error) between detected line and frame center
-                cte_x = center_of_frame[0] - center_of_contour[0]
-                cv2.putText(frame, "Cross Track Error (x): " + str(cte_x), (0, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
-                print(f"X-axis CTE: {cte_x}")
-                sock.sendall((str(cte_x) + "\n").encode("utf-8"))
+                # Display errors
+                cv2.putText(frame, f"Offset error: {offset_error:.1f}  Angle error: {angle_error:.2f}", (0, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+                cv2.putText(frame, f"Combined error: {error:.1f}", (0, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255))
+                print(f"Offset error: {offset_error:.1f}, Angle error: {angle_error:.3f}, Combined error: {error:.1f}")
 
+                sock.sendall((str(error) + "\n").encode("utf-8"))
             else:
                 cv2.putText(frame, "Line: NOT FOUND", (0, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-
         except Exception as e:
             print(f"Exception incurred: {e}")
+            sock.sendall(b"STOP\n")
 
         # Draw the x-axis median line and frame center
         cv2.circle(frame, (center_of_frame[0], center_of_frame[1]), 7, (255, 255, 255), -1)
@@ -102,14 +130,13 @@ def follow_line(sock):
 
         # Display the current video frame
         cv2.imshow("Current Line-Following Output", frame)
+        cv2.imshow("Tape Mask", gray_threshold)
         key = cv2.waitKey(1)
         if key == ord('q'):
+            sock.sendall(b"STOP\n")
             break
 
-        # Read the motor settings from the ESP32
-        #res = recv_line(sock)
-        #if res is not None:
-        #    print(f"Motor settings: {res}")
+    vid.release()
     sock.close()
     cv2.destroyAllWindows()
 
@@ -123,4 +150,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
