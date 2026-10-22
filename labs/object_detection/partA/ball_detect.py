@@ -4,7 +4,7 @@ import pickle
 import time
 
 # This step hooks into the ESP32's HTTP server."
-cap = cv2.VideoCapture("http://192.168.50.<TODO>/stream")
+cap = cv2.VideoCapture("http://192.168.50.225")
 
 # Constants (Adjust based on your setup)
 KNOWN_DISTANCE = 50.0  # cm (Reference distance of the ball)
