@@ -167,6 +167,7 @@ def main():
     line_following_sock = socket_setup(LINE_FOLLOW_IP, TCP_PORT)
     object_detection_sock = socket_setup(OBJECT_DETECTION_IP, TCP_PORT)
 
+    # Wait until a voice command is given
     objectName = receive_command(line_following_sock)
 
     if objectName == "error":
@@ -174,7 +175,7 @@ def main():
         line_following_sock.close()
         object_detection_sock.close() 
 
-    
+
 
     # start following the line
     # We can't use the function as is
