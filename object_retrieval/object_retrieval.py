@@ -57,6 +57,8 @@ def receive_command(sock):
             print("Command Received")
             return cmd
 
+def findObject(sock):
+
 def follow_line(sock):
     vid = cv2.VideoCapture(line_follow_url)
     while True:
@@ -161,6 +163,30 @@ def follow_line(sock):
     sock.close()
     cv2.destroyAllWindows()
 
+def retrieve_object(line_follow_sock, object_detection_sock):
+    # Follow line until object is detected
+    while True:    
+        # identify objec
+        objectFound = findObject(object_detection_sock) 
+        
+        # if no object spotted
+        if not objectFound:
+            follow_line(line_follow_sock)
+        else:
+            return True
+
+    # 
+    while True:
+        assert True
+
+    # Grab object
+    while True:
+        assert True
+    
+    # return to line
+    while True:
+        assert True
+
 def main():
     time.sleep(5)
     # Connect to both the line following and object detection ESP32s
@@ -175,7 +201,7 @@ def main():
         line_following_sock.close()
         object_detection_sock.close() 
 
-
+    retrieve_object(line_following_sock, object_detection_sock)
 
     # start following the line
     # We can't use the function as is
