@@ -73,7 +73,7 @@ void cameraServerSetup() {
   // Drop down frame size for higher initial frame rate
   sensor_t * s = esp_camera_sensor_get();
   s->set_framesize(s, FRAMESIZE_QVGA);
-  s->set_vflip(s, 0);        // 1-Upside down, 0-No operation
+  s->set_vflip(s, 1);        // 1-Upside down, 0-No operation
   s->set_hmirror(s, 0);      // 1-Reverse left and right, 0-No operation
 }
 

@@ -1,0 +1,7 @@
+imutils
+numpy
+scipy
+matplotlib
+opencv-python
+ultralytics
+serial

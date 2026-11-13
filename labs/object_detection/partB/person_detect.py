@@ -8,7 +8,7 @@ import threading
 import queue
 import time
 
-TCP_IP = '192.168.50.<TODO>'
+TCP_IP = '192.168.50.226'
 TCP_PORT = 5005
 url = f'http://{TCP_IP}/stream'
 
