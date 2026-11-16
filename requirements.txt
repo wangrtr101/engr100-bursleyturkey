@@ -4,4 +4,4 @@ scipy
 matplotlib
 opencv-python
 ultralytics
-serial
+pyserial

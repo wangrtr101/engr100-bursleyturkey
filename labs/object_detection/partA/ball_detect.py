@@ -4,9 +4,9 @@ import pickle
 import time
 
 # This step hooks into the ESP32's HTTP server."
-cap = cv2.VideoCapture("http://192.168.50.225")
+cap = cv2.VideoCapture("http://192.168.50.226/stream")
 
-# Constants (Adjust based on your setup)
+# Constants (Adjust based on your setup)source ../bin/activate
 KNOWN_DISTANCE = 50.0  # cm (Reference distance of the ball)
 KNOWN_DIAMETER = 4.0   # cm (Actual diameter of the orange ball)
 CAMERA_FOV_X = 60  # Horizontal Field of View in degrees

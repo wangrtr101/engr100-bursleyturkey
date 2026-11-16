@@ -8,6 +8,15 @@ int topspeed = 255;
 #define RIGHT 'd'
 #define BACK 's'
 #define STOP 'x'
+// Spin in place (wheels turn opposite ways). Separate from 'a'/'d' because the line-follow
+// ESP32 sends 'a'/'d' during normal line following, and those must keep driving forward.
+#define SPIN_LEFT 'q'
+#define SPIN_RIGHT 'e'
+
+// Claw servo signal pin. Can't be a motor pin (5, 6, 7, 8, 9, 11), the ESP32 serial pins (0, 1),
+// or the voice sensor's I2C pins (A4, A5). Pin 3 isn't used anywhere else in this sketch;
+// change it here if you wire the servo to a different free pin.
+#define CLAW_SERVO_PIN 3
 
 // Define voice recog
 DFRobot_DF2301Q_I2C asr;
@@ -88,14 +97,24 @@ void process_direction(char direction) {
       stopcar();
       break;
     }
+
+    case SPIN_LEFT: {
+      left();
+      break;
+    }
+
+    case SPIN_RIGHT: {
+      right();
+      break;
+    }
   }
 }
 
 void setup() {
   // Put your setup code here, to run once:
 
-  // claw servo setup - modify pinout
-  clawServo.attach(9);
+  // claw servo setup (was pin 9, which is also a right-motor direction pin)
+  clawServo.attach(CLAW_SERVO_PIN);
 
   // Voice Recognition Setup - Taken from DFRobot documentation
   Serial.begin(115200);
@@ -165,12 +184,15 @@ void loop() {
   switch (CMDID){
     case 5: // Get me the ball
       Serial.println("ball");
+      break;
 
     case 6: // Get me the pill bottle
       Serial.println("pillbottle");
+      break;
 
     case 7: // Get me the tissue pack
       Serial.println("tissuepack");
+      break;
 
   }
   

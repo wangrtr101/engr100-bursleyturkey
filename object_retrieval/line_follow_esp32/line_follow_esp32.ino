@@ -18,12 +18,20 @@ WiFiServer server(port);
 void startCameraServer();
 
 // define PID control constants
-#define K_P 0.4
+// K_P used to be 0.4, but the old derivative bug (error/dt instead of (error - lastError)/dt)
+// quietly added another 0.5 * error, so the steering tuned in Lab 6 was really Kp = 0.9.
+// K_P = 0.9 keeps that steering strength, and K_D now actually damps weaving. Retune both on the floor.
+#define K_P 0.9
 #define K_I 0.0
 #define K_D 0.1
 #define BASE_SPEED 80
 #define TOP_SPEED 255
 #define INFLECTION_POINT 30.0
+
+// 1 = also send each "left,right,dir" command back to the laptop for debugging.
+// Off by default: nothing on the laptop reads these echoes, and this socket also carries
+// the Nano's voice commands, so they would pile up and get mixed in with them.
+#define DEBUG_ECHO_PID 0
 
 void cameraServerSetup() {
   camera_config_t config = {};
@@ -102,21 +110,31 @@ void WiFiSetup() {
   WiFi.setAutoReconnect(true);
 }
 
+// PID memory. Kept outside pid_control() so pid_reset() can clear it at the start of each run.
+float pid_integral = 0;
+float pid_last_error = 0;
+bool pid_has_last_error = false;
+
+void pid_reset() {
+  pid_integral = 0;
+  pid_last_error = 0;
+  pid_has_last_error = false;
+}
+
 float pid_control(float error, float dt) {
-  static float integral = 0;
-  static float lastError = 0;
+  // compute error integral (error accumulation scaled by time)
+  pid_integral += error*dt;
 
-  // TODO: compute error integral (error accumulation scaled by time)
-  integral += error*dt;
+  // compute error derivative: how much the error changed since the last frame, per second.
+  // (The first frame of a run has no previous error, so its derivative is 0.)
+  float derivative = pid_has_last_error ? (error - pid_last_error)/dt : 0;
 
-  // TODO: compute error derivative (derivative approximation)
-  float derivative = error/dt;
-
-  // TODO: compute output (sum of scaled P, I, D error values)
-  float output = K_P * error + K_I * integral + K_D * derivative;
+  // compute output (sum of scaled P, I, D error values)
+  float output = K_P * error + K_I * pid_integral + K_D * derivative;
 
   // keep last value, return computed output
-  lastError = error;
+  pid_last_error = error;
+  pid_has_last_error = true;
   return output;
 }
 
@@ -154,6 +172,7 @@ void loop() {
   // Put your main code here, to run repeatedly:
   WiFiClient client = server.available();           // Listen for incoming clients
   if (client) {                                     // If you get a client,
+    pid_reset();                                    // Start each run with fresh PID memory
     while (client.connected()) {                    // Loop while the client's connected
       if (Serial.available()){                           // Read any input from the Nano
         client.println(Serial.readStringUntil('\n'));    // Forward messages from Nano to the Computer
@@ -165,6 +184,16 @@ void loop() {
         // STOP if no line is detected
         if (raw_input == "STOP") {
           Serial.println(raw_input); // send STOP command to the Arduino Nano
+          pid_reset();               // so restarting after a stop doesn't use a stale error
+          continue;
+        }
+
+        // Direct motor command from the laptop, like "150,150,e" (left speed, right speed,
+        // direction). It's already in the format the Nano reads, so pass it through unchanged
+        // instead of running PID. Line-following errors are plain numbers with no comma.
+        if (raw_input.indexOf(',') >= 0) {
+          Serial.println(raw_input);
+          pid_reset();               // so line following starts fresh afterwards
           continue;
         }
 
@@ -182,7 +211,9 @@ void loop() {
 
         String pid_cmd = String(left_side_speed) + "," + String(right_side_speed) + "," + String(direction);
         Serial.println(pid_cmd); // send PID values to Arduino Nano
+#if DEBUG_ECHO_PID
         client.println(pid_cmd); // send PID values back to laptop for debugging
+#endif
       }
     }
     Serial.println("STOP");
