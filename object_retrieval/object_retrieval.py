@@ -16,6 +16,12 @@ OBJECT_DETECTION_IP = '192.168.50.226'
 TCP_PORT = 5005
 
 CONFIDENCE_THRESHOLD = 0.5
+X_THRESHOLD = 10
+AREA_THRESHOLD = 10000
+
+# to clear line
+LINE_UP = '\033[1A'
+LINE_CLEAR = '\x1b[2K'
 
 # Run YOLO on the Mac's GPU (mps) when available, else an NVIDIA GPU (cuda), else the CPU
 if torch.backends.mps.is_available():
@@ -54,7 +60,13 @@ low_orange = np.array([0, 0, 20], dtype=np.uint8)
 high_orange = np.array([70, 255, 255], dtype=np.uint8)
 angle_weight = 0
 
+
 # MISC TASKS
+
+# delete the line to make printing cleaner
+def delete_line():
+    print(LINE_UP, end=LINE_CLEAR)
+
 def socket_setup(IP, PORT):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -76,10 +88,13 @@ def recv_line(sock):
                 break
             data += chunk
         except BlockingIOError:
-            # buffer is empty, wait before requesting again
+            # no message has arrived so return
+            if not data:
+                return None
+            # Wait a second before requesting again
             time.sleep(0.001)
             continue
-    return data.decode().strip()
+    return data.decode("utf-8", errors="ignore").strip()
 
 # Receive command from esp
 def receive_command(sock):
@@ -87,6 +102,10 @@ def receive_command(sock):
     print("Waiting for voice command...")
     while True:
         cmd = recv_line(sock)
+        if cmd is None:
+            # recv_line returns None when nothing has arrived yet: keep waiting
+            time.sleep(0.01)
+            continue
         if not cmd:
             print("Command reading error")
             return "error"
@@ -130,22 +149,6 @@ def stream_reader(frame_queue, url):
 
         frame_queue.put(frame)
         #print(f"Put frame {i} on the queue")
-
-def stream_processor(frame_queue, model):
-    print("Starting stream_processor thread...")
-    while True:
-        curr_frame = frame_queue.get()
-        results = model(curr_frame, stream=True)
-        # annotated_frame = results[0].plot()
-        # annotated_frame = imutils.resize(annotated_frame, width=600)
-        # Iterate through results (only 1 item for single frame)
-        for result in results:
-            annotated_frame = result.plot()  # Plot boxes/labels
-            annotated_frame = imutils.resize(annotated_frame, width=600)
-            cv2.imshow("YOLO Output", annotated_frame)
-        cv2.imshow("YOLO Output", annotated_frame)
-        if cv2.waitKey(1) == 27:
-            break
 
 # Follow line pretty much ripped from labs
 # now returns True at the end 
@@ -534,6 +537,8 @@ def main():
         args=(frame_queue, object_detection_url),
         daemon=True
     ).start()
+
+    # Run object retrieval
     try:
         retrieve_object(line_following_sock, object_detection_sock, model, frame_queue)
     finally:

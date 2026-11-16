@@ -17,6 +17,22 @@ def socket_setup(ip, port):
     sock.setblocking(False)
     return sock
 
+def recv_line(sock):
+    data = b""
+    while True:
+        try:
+            chunk = sock.recv(1)
+            if not chunk or chunk == b"\n":
+                break
+            data += chunk
+        except BlockingIOError:
+            # If we haven't read any bytes yet, no message has arrived—return immediately
+            if not data:
+                return None
+            # If we are mid-message, wait 1ms for the rest of the line to finish arriving
+            time.sleep(0.001)
+            continue
+    return data.decode("utf-8", errors="ignore").strip()
 def main():
     # Connect to both ESP32 TCP sockets
     line_follow_sock = socket_setup(LINE_FOLLOW_IP, TCP_PORT)
@@ -42,7 +58,9 @@ def main():
             cv2.imshow("Line Follow Stream", frame1)
         if ret2:
             cv2.imshow("Object Detection Stream", frame2)
-
+        msg = recv_line(line_follow_sock)
+        if msg:
+            print("Result: " + str(msg))
         # Press 'q' or 'ESC' to quit
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q') or key == 27:

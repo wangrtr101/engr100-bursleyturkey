@@ -79,12 +79,12 @@ void process_direction(char direction) {
     }
 
     case LEFT: {
-      forward();
+      left();
       break;
     }
 
     case RIGHT: {
-      forward();
+      right();
       break;
     }
 
@@ -132,7 +132,7 @@ void setup() {
    * @brief Set voice volume
    * @param voc - Volume value(1~7)
    */
-  asr.setVolume(4);
+  asr.setVolume(6);
 
   /**
      @brief Set mute mode
@@ -144,7 +144,7 @@ void setup() {
      @brief Set wake-up duration
      @param wakeTime - Wake-up duration (0-255)
   */
-  asr.setWakeTime(20);
+  asr.setWakeTime(5);
 
   /**
      @brief Get wake-up duration
@@ -152,8 +152,7 @@ void setup() {
   */
   uint8_t wakeTime = 0;
   wakeTime = asr.getWakeTime();
-  Serial.print("wakeTime = ");
-  Serial.println(wakeTime);
+
 
   // asr.playByCMDID(1);   // Wake-up command
 
@@ -181,19 +180,21 @@ void setup() {
 void loop() {
   // Check to see if a voice recognition 
   uint8_t CMDID = asr.getCMDID();
-  switch (CMDID){
-    case 5: // Get me the ball
-      Serial.println("ball");
-      break;
-
-    case 6: // Get me the pill bottle
-      Serial.println("pillbottle");
-      break;
-
-    case 7: // Get me the tissue pack
-      Serial.println("tissuepack");
-      break;
-
+  if (CMDID != 0) {
+    switch (CMDID) {
+      case 5: // Get me the ball
+        Serial.println("ball");
+        break;
+      case 6: // Get me the pill bottle
+        Serial.println("pillbottle");
+        break;
+      case 7: // Get me the tissue pack
+        Serial.println("tissuepack");
+        break;
+      default:
+        Serial.println("ID: " + String(CMDID));
+        break;
+    }
   }
   
   // Read motor and claw inputs
