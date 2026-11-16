@@ -14,6 +14,12 @@ OBJECT_DETECTION_IP = '192.168.50.226'
 TCP_PORT = 5005
 
 CONFIDENCE_THRESHOLD = 0.5
+X_THRESHOLD = 10
+AREA_THRESHOLD = 10000
+
+# to clear line
+LINE_UP = '\033[1A'
+LINE_CLEAR = '\x1b[2K'
 
 line_follow_url='http://' + LINE_FOLLOW_IP + '/stream'
 object_detection_url='http://' + OBJECT_DETECTION_IP + '/stream'
@@ -22,7 +28,13 @@ low_orange = np.array([0, 0, 20], dtype=np.uint8)
 high_orange = np.array([70, 255, 255], dtype=np.uint8)
 angle_weight = 0
 
+
 # MISC TASKS
+
+# delete the line to make printing cleaner
+def delete_line():
+    print(LINE_UP, end=LINE_CLEAR)
+
 def socket_setup(IP, PORT):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -44,10 +56,13 @@ def recv_line(sock):
                 break
             data += chunk
         except BlockingIOError:
-            # buffer is empty, wait before requesting again
+            # no message has arrived so return
+            if not data:
+                return None
+            # Wait a second before requesting again
             time.sleep(0.001)
             continue
-    return data.decode().strip()
+    return data.decode("utf-8", errors="ignore").strip()
 
 # Receive command from esp
 def receive_command(sock):
@@ -97,22 +112,6 @@ def stream_reader(frame_queue, url):
 
         frame_queue.put(frame)
         #print(f"Put frame {i} on the queue")
-
-def stream_processor(frame_queue, model):
-    print("Starting stream_processor thread...")
-    while True:
-        curr_frame = frame_queue.get()
-        results = model(curr_frame, stream=True)
-        # annotated_frame = results[0].plot()
-        # annotated_frame = imutils.resize(annotated_frame, width=600)
-        # Iterate through results (only 1 item for single frame)
-        for result in results:
-            annotated_frame = result.plot()  # Plot boxes/labels
-            annotated_frame = imutils.resize(annotated_frame, width=600)
-            cv2.imshow("YOLO Output", annotated_frame)
-        cv2.imshow("YOLO Output", annotated_frame)
-        if cv2.waitKey(1) == 27:
-            break
 
 # Follow line pretty much ripped from labs
 # now returns True at the end 
@@ -215,7 +214,7 @@ def follow_line(vid, sock):
 
 # Use object detection pipeline
 # Returns the object found, x offset, contour area 
-def find_object(frame_queue, model):
+def find_object(frame, model):
     if frame.queue.empty():
         return False, 0.0, 0.0
 
@@ -235,8 +234,8 @@ def find_object(frame_queue, model):
 
         # check if result is over conf threshold
         if result.boxes:
-            # according to google the boxes are default sorted
-            # by highest conf value, so [0] should be the best :/
+            # according to docs the boxes are default sorted
+            #   by highest conf value, so [0] should be the best :/
             best_contour = result.boxes[0]
             best_conf = float(result.boxes[0])
             if best_conf >= CONFIDENCE_THRESHOLD:
@@ -273,15 +272,20 @@ def retrieve_object(line_follow_sock, object_detection_sock, model, frame_queue)
             line_follow_sock.sendall(b"STOP\n")
             sys.exit(67)
 
-            
+    time.sleep(2)        
     # Seek out object and pick it up
     print("Object Found! Seeking object...")
     while True:
         found, x_offset, contour_area = find_object(frame_queue, model)
 
         if found:
-            # MAYBE DONT USE ULTRASONIC :O
-            if contour_area >=
+            # Turn to object first
+            if np.abs(x_offset) >= X_THRESHOLD:
+                line_follow_sock.sendall((str(x_offset) + "\n").encode("utf-8"))
+
+            # then move to it
+            elif contour_area >= AREA_THRESHOLD:
+                line_follow_sock.sendall(())
 
         else:
             print("Lost object :(")
@@ -335,10 +339,12 @@ def main():
         args=(frame_queue, object_detection_url),
         daemon=True
     ).start()
+
+    # Run object retrieval
     try:
         retrieve_object(line_following_sock, object_detection_sock, model, frame_queue)
     finally:
-        line_follow_sock.close()
+        line_following_sock.close()
         object_detection_sock.close()
         cv2.destroyAllWindows()
 

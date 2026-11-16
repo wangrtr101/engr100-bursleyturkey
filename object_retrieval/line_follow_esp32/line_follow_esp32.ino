@@ -154,9 +154,16 @@ void loop() {
   // Put your main code here, to run repeatedly:
   WiFiClient client = server.available();           // Listen for incoming clients
   if (client) {                                     // If you get a client,
+    while (Serial.available()){
+      Serial.read();
+    }
     while (client.connected()) {                    // Loop while the client's connected
-      if (Serial.available()){                           // Read any input from the Nano
-        client.println(Serial.readStringUntil('\n'));    // Forward messages from Nano to the Computer
+      if (Serial.available()) {
+        String nano_msg = Serial.readStringUntil('\n');
+        nano_msg.trim();
+        if (nano_msg.length() > 0) {
+          client.println(nano_msg);                 // Forward message from Nano to Computer
+        }
       }
       else if (client.available()) {                     // If there's bytes to read from the client, get input
         String raw_input = client.readStringUntil('\n'); // read in until newline character
