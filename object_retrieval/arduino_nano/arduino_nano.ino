@@ -1,4 +1,10 @@
+// Voice recognition is turned off for testing, so the Nano starts driving right away
+// instead of waiting for the voice module. Set to 1 to turn it back on.
+#define USE_VOICE 0
+
+#if USE_VOICE
 #include "DFRobot_DF2301Q.h"
+#endif
 #include <Servo.h>
 
 int topspeed = 255;
@@ -18,8 +24,10 @@ int topspeed = 255;
 // change it here if you wire the servo to a different free pin.
 #define CLAW_SERVO_PIN 3
 
+#if USE_VOICE
 // Define voice recog
 DFRobot_DF2301Q_I2C asr;
+#endif
 
 // Define claw servo
 Servo clawServo;
@@ -28,7 +36,7 @@ void Set_Speed(int Left, int Right)
 {
   if (((int)Left)>topspeed) {Left = topspeed;}
   if (((int)Right)>topspeed) {Right = topspeed;}
-  
+
   analogWrite(5,Left);    // Send a speed value (Left = 0-255) to Pin #5 for setting the rotation speed of the two left-side wheels.
   analogWrite(6,Right);   // Send a speed value (Right = 0-255) to Pin #6 for setting the rotation speed of the two right-side wheels.
 }
@@ -116,8 +124,10 @@ void setup() {
   // claw servo setup (was pin 9, which is also a right-motor direction pin)
   clawServo.attach(CLAW_SERVO_PIN);
 
-  // Voice Recognition Setup - Taken from DFRobot documentation
   Serial.begin(115200);
+
+#if USE_VOICE
+  // Voice Recognition Setup - Taken from DFRobot documentation
 
   // Serial prints probably get delayed here or don't work
   //  because message forwarding on the esp32 is only during loop 
@@ -161,6 +171,7 @@ void setup() {
      @param CMDID - command word ID
   */
   //asr.playByCMDID(23);  // Command word ID
+#endif // USE_VOICE
 
 
   // Motor setup
@@ -178,6 +189,7 @@ void setup() {
 }
 
 void loop() {
+#if USE_VOICE
   // Check to see if a voice recognition 
   uint8_t CMDID = asr.getCMDID();
   if (CMDID != 0) {
@@ -196,6 +208,7 @@ void loop() {
         break;
     }
   }
+#endif // USE_VOICE
   
   // Read motor and claw inputs
   while (Serial.available()) {

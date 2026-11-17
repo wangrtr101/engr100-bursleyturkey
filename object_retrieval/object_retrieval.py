@@ -46,7 +46,7 @@ LOST_FRAMES_TO_STOP = 5      # stop the motors if the ball disappears for this m
 # Turning around and getting back to the line. No gyro or encoders, so the 180 is timed:
 # tune SPIN_TIME_180 on the real floor until the rover ends up facing back the way it came.
 SPIN_SPEED = 150             # 0-255, both wheels, turning in opposite directions
-SPIN_TIME_180 = 1.2          # seconds of spinning for a 180 degree turn. TUNE THIS
+SPIN_TIME_180 = 2.3          # seconds (1.2 s turned ~92 degrees) of spinning for a 180 degree turn. TUNE THIS
 SPIN_DIRECTION = 'e'         # 'e' = spin right (clockwise), 'q' = spin left
 DRIVE_SPEED = 80             # 0-255, driving straight back toward the line (same as the ESP32's BASE_SPEED)
 DRIVE_TIMEOUT = 5.0          # seconds. Stop if no line shows up within this time
