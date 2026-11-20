@@ -172,8 +172,6 @@ void setup() {
   pinMode (9, OUTPUT);
   pinMode (11, OUTPUT);
 
-  Serial.begin(115200);
-
   stopcar();
 }
 

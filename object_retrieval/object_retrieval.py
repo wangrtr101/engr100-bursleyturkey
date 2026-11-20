@@ -4,9 +4,8 @@ import cv2
 import socket
 import numpy as np
 import time
-import select
-import torch
 from ultralytics import YOLO
+import torch
 import imutils
 import threading
 import queue
@@ -23,13 +22,7 @@ AREA_THRESHOLD = 10000
 LINE_UP = '\033[1A'
 LINE_CLEAR = '\x1b[2K'
 
-# Run YOLO on the Mac's GPU (mps) when available, else an NVIDIA GPU (cuda), else the CPU
-if torch.backends.mps.is_available():
-    DEVICE = "mps"
-elif torch.cuda.is_available():
-    DEVICE = "cuda"
-else:
-    DEVICE = "cpu"
+DEVICE = "cpu"
 
 # Orange ball detection (same narrow HSV threshold as labs/object_detection/partA/ball_detect.py)
 BALL_LOW = np.array([5, 35, 100], dtype=np.uint8)
@@ -111,8 +104,11 @@ def receive_command(sock):
             return "error"
 
         if cmd in objects:
-            print(f"Command Received: {cmd}")
+            print(f"Valid command received: {cmd}")
             return cmd
+        elif cmd:
+            print(f"Invalid command received: {cmd}")
+            return "ball"
 
 # Returns the YOLO model for the object, or None for the ball (found by color instead).
 # if/elif instead of match: the project venv is Python 3.9, and match needs 3.10+.
@@ -476,7 +472,7 @@ def retrieve_object(line_follow_sock, object_detection_sock, model, frame_queue)
         # keep reading frames during the spin so the buffer stays fresh and the window updates
         ret, frame = line_follow_vid.read()
         key = show_line_cam(frame, "Turning around") if ret else cv2.waitKey(1) & 0xFF
-        check_quit(key, line_follow_sock)
+        check_quit(key  , line_follow_sock)
     line_follow_sock.sendall(b"STOP\n")
     time.sleep(0.3)  # let the rover settle so it doesn't drift sideways into the forward drive
 
@@ -519,14 +515,15 @@ def main():
 
     # Voice command disabled for testing: start line following right away, looking for the ball.
     # To turn voice back on, delete the next line and uncomment the block below it.
-    objectName = "ball"
+    #objectName = "ball"
+    
     # # Wait until a voice command is given
-    # objectName = receive_command(line_following_sock)
-    # if objectName == "error":
-    #     print("Error retrieving object input")
-    #     line_following_sock.close()
-    #     object_detection_sock.close()
-    #     sys.exit(1)
+    objectName = receive_command(line_following_sock)
+    if objectName == "error":
+        print("Error retrieving object input")
+        line_following_sock.close()
+        object_detection_sock.close()
+        sys.exit(1)
 
     model = pick_model(objectName)
 
