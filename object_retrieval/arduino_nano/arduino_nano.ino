@@ -1,10 +1,4 @@
-// Voice recognition is turned off for testing, so the Nano starts driving right away
-// instead of waiting for the voice module. Set to 1 to turn it back on.
-#define USE_VOICE 0
-
-#if USE_VOICE
 #include "DFRobot_DF2301Q.h"
-#endif
 #include <Servo.h>
 
 int topspeed = 255;
@@ -19,24 +13,23 @@ int topspeed = 255;
 #define SPIN_LEFT 'q'
 #define SPIN_RIGHT 'e'
 
-// Claw servo signal pin. Can't be a motor pin (5, 6, 7, 8, 9, 11), the ESP32 serial pins (0, 1),
-// or the voice sensor's I2C pins (A4, A5). Pin 3 isn't used anywhere else in this sketch;
-// change it here if you wire the servo to a different free pin.
-#define CLAW_SERVO_PIN 3
+// servo definitions
+#define SERVO_PIN 3
+#define SERVO_OPEN 0
+#define SERVO_CLOSE 90
 
-#if USE_VOICE
+
 // Define voice recog
 DFRobot_DF2301Q_I2C asr;
-#endif
 
 // Define claw servo
-Servo clawServo;
+Servo main_servo;
 
 void Set_Speed(int Left, int Right)
 {
   if (((int)Left)>topspeed) {Left = topspeed;}
   if (((int)Right)>topspeed) {Right = topspeed;}
-
+  
   analogWrite(5,Left);    // Send a speed value (Left = 0-255) to Pin #5 for setting the rotation speed of the two left-side wheels.
   analogWrite(6,Right);   // Send a speed value (Right = 0-255) to Pin #6 for setting the rotation speed of the two right-side wheels.
 }
@@ -119,15 +112,15 @@ void process_direction(char direction) {
 }
 
 void setup() {
+  delay(4000);
   // Put your setup code here, to run once:
 
-  // claw servo setup (was pin 9, which is also a right-motor direction pin)
-  clawServo.attach(CLAW_SERVO_PIN);
-
+  // Voice Recognition Setup - Taken from DFRobot documentation
   Serial.begin(115200);
 
-#if USE_VOICE
-  // Voice Recognition Setup - Taken from DFRobot documentation
+  // servo setup
+  main_servo.attach(SERVO_PIN);
+  main_servo.write(SERVO_CLOSE);
 
   // Serial prints probably get delayed here or don't work
   //  because message forwarding on the esp32 is only during loop 
@@ -171,7 +164,6 @@ void setup() {
      @param CMDID - command word ID
   */
   //asr.playByCMDID(23);  // Command word ID
-#endif // USE_VOICE
 
 
   // Motor setup
@@ -187,50 +179,60 @@ void setup() {
 }
 
 void loop() {
-#if USE_VOICE
   // Check to see if a voice recognition 
   uint8_t CMDID = asr.getCMDID();
   if (CMDID != 0) {
     switch (CMDID) {
-      case 5: // Get me the ball
-        Serial.println("ball");
+      case 5: // Get me the cup
+        Serial.println("cup");
         break;
-      case 6: // Get me the pill bottle
-        Serial.println("pillbottle");
+      case 6: // Get me the banana
+        Serial.println("banana");
         break;
-      case 7: // Get me the tissue pack
-        Serial.println("tissuepack");
+      case 7: // Get me the teddy bear
+        Serial.println("teddybear");
         break;
-      default:
-        Serial.println("ID: " + String(CMDID));
+      
+      case 2: // wake up command ID should be bypassed
+        break;
+
+      default: //defaults to cup
+        Serial.println("cup");
         break;
     }
   }
-#endif // USE_VOICE
   
   // Read motor and claw inputs
   while (Serial.available()) {
-    String pid_command = Serial.readStringUntil('\n');
-    pid_command.trim(); // Remove "\n" endline character
+    String command = Serial.readStringUntil('\n');
+    command.trim(); // Remove "\n" endline character
 
     // TODO: parse servo command
+    if (command == "CLOSE"){
+      main_servo.write(SERVO_CLOSE);
+      continue;
+    }
 
+    if (command == "OPEN"){
+      main_servo.write(SERVO_OPEN);
+      continue;
+    }
     
     // If STOP received, then stop the car motors
-    if (pid_command == "STOP") {
+    if (command == "STOP") {
       stopcar();
       continue;
     }
 
     // Parse into left/right speeds and direction
-    int firstCommaIndex = pid_command.indexOf(',');
-    int secondCommaIndex = pid_command.indexOf(',', firstCommaIndex + 1);
+    int firstCommaIndex = command.indexOf(',');
+    int secondCommaIndex = command.indexOf(',', firstCommaIndex + 1);
 
     // Process both motor direction and speed
     if (firstCommaIndex > 0 && secondCommaIndex > firstCommaIndex) {
-      int leftSpeed = pid_command.substring(0, firstCommaIndex).toInt();
-      int rightSpeed = pid_command.substring(firstCommaIndex + 1).toInt();
-      char direction = pid_command.substring(secondCommaIndex + 1)[0];
+      int leftSpeed = command.substring(0, firstCommaIndex).toInt();
+      int rightSpeed = command.substring(firstCommaIndex + 1).toInt();
+      char direction = command.substring(secondCommaIndex + 1)[0];
 
       // Process motor direction
       process_direction(direction);
